@@ -1,0 +1,12 @@
+package data;
+
+import org.newdawn.slick.opengl.Texture;
+import static helpers.Artist.QuickLoad;
+
+public class GameOver {
+	private static Texture menuBackground;
+	public static void GameOver() {
+	 QuickLoad("end");
+	}
+
+}

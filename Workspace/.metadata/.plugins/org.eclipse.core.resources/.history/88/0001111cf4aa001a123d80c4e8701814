@@ -1,0 +1,9 @@
+package data;
+
+public class GameOver {
+	
+	public void GameOver() {
+		System.exit(0);
+	}
+
+}

@@ -1,0 +1,15 @@
+package data;
+
+import static helpers.Artist.QuickLoad;
+
+public class EnemyEvil extends Enemy{
+
+	public EnemyEvil(int tileX, int tileY, TileGrid grid) {
+		super(tileX, tileY, grid);
+		this.setTexture(QuickLoad("Evil"));
+		this.setSpeed(60);
+		this.setHealth(20);
+		
+	}
+
+}

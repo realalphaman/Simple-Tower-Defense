@@ -1,0 +1,16 @@
+package data;
+
+import static helpers.Artist.QuickLoad;
+
+public class EnemyAlien extends Enemy {
+
+	public EnemyAlien(int tileX, int tileY, TileGrid grid) {
+		super(tileX, tileY, grid);
+		this.setTexture(QuickLoad("Alien"));
+		this.setSpeed(40);
+		this.setHealth(160);
+	}
+	
+	
+
+}

@@ -1,0 +1,300 @@
+package data;
+
+import org.newdawn.slick.opengl.Texture;
+
+import static helpers.Artist.*;
+import static helpers.Clock.*;
+
+import java.util.ArrayList;
+
+public class Enemy implements Entity {
+	private int width,height, currentCheckpoint;
+	private float speed,x,y, health, startHealth, hiddenHealth;
+	private Texture texture, healthBackground, healthForeground, healthBorder;
+	private Tile startTile;
+	private boolean first, alive;
+	private TileGrid grid;
+	
+	private ArrayList<Checkpoint> checkpoints;
+	private int[] directions;
+	
+	public Enemy(int tileX, int tileY, TileGrid grid) {
+		this.texture= QuickLoad("Alien");
+		this.healthBackground= QuickLoad("healthBackground");
+		this.healthForeground=QuickLoad("healthForeground");
+		this.healthBorder= QuickLoad("healthBorder");
+		this.startTile = grid.GetTile(tileX, tileY);
+		this.x=startTile.getX();
+		this.y=startTile.getY();
+		this.width=TILE_SIZE;
+		this.height=TILE_SIZE;
+		this.speed=50;
+		this.health=50;
+		this.startHealth=health;
+		this.hiddenHealth=health;
+		this.grid=grid;
+		this.first=true;
+		this.alive=true;
+		this.checkpoints = new ArrayList<Checkpoint>();
+		this.directions = new int[2];
+		//xDirection
+		this.directions[0]=0;
+		//yDirection
+		this.directions[1]=0;
+		this.directions = findNextD(startTile);
+		this.currentCheckpoint=0;
+		populateCheckpointList();
+	}
+
+	public Enemy(Texture texture,Tile startTile, TileGrid grid, int width, int height, float speed, float health) {
+		this.texture = texture;
+		this.healthBackground= QuickLoad("healthBackground");
+		this.healthForeground=QuickLoad("healthForeground");
+		this.healthBorder= QuickLoad("healthBorder");
+		this.startTile = startTile;
+		this.x=startTile.getX();
+		this.y=startTile.getY();
+		this.width=width;
+		this.height=height;
+		this.speed=speed;
+		this.health=health;
+		this.startHealth=health;
+		this.hiddenHealth=health;
+		this.grid=grid;
+		this.first=true;
+		this.alive=true;
+		this.checkpoints = new ArrayList<Checkpoint>();
+		this.directions = new int[2];
+		//xDirection
+		this.directions[0]=0;
+		//yDirection
+		this.directions[1]=0;
+		this.directions = findNextD(startTile);
+		this.currentCheckpoint=0;
+		populateCheckpointList();
+	}
+	
+	public void update() {
+		//Check neu day la lan dau class nay duoc update, neu dung thi khong lam gi ca
+		if(first)
+			first = false;
+		else {
+			if(checkpointReached()) {
+				//check neu co nhieu hon checkpoints truoc khi di chuyen
+				if(currentCheckpoint+1 == checkpoints.size())
+					endOfMazeReached();
+				else 
+				currentCheckpoint++;
+			} else {
+				x+= Delta() * checkpoints.get(currentCheckpoint).getxDirection()*speed;
+				y+= Delta() *checkpoints.get(currentCheckpoint).getyDirection()*speed;
+			}		
+		}
+	}
+	
+	private void endOfMazeReached() {
+		Player.modifyLives(-1);
+		if(Player.Lives == 0)
+			GameOver.GameOver();
+		die();
+	}
+	
+	private boolean checkpointReached() {
+		// Them checkpoint dau tien dua tren startTile
+		boolean reached = false;
+		Tile t = checkpoints.get(currentCheckpoint).getTile();
+		// kiem tra neu vi tri dat duoc dung trong phuong sai cua 3
+		if(x>t.getX()-3 && x < t.getX()+3&& y> t.getY()-3 && y<t.getY()+3) {
+			reached = true;
+			x = t.getX();
+			y=t.getY();
+		}
+		return reached;
+	}
+	
+	private void populateCheckpointList() {
+		checkpoints.add(findNextC(startTile, directions = findNextD(startTile)));
+		int counter=0;
+		//xem co continue khong
+		boolean cont = true;
+		while(cont) {
+			int[] currentD = findNextD(checkpoints.get(counter).getTile());
+			// kiem tra xem neu diem tiep theo ton tai, dung sau diem 20
+			if(currentD[0]==2 || counter ==20) {
+				cont = false;
+			} else {
+				checkpoints.add(findNextC(checkpoints.get(counter).getTile(), directions = findNextD(checkpoints.get(counter).getTile())));
+			}
+			counter++;
+		}
+		
+	}
+	
+	private Checkpoint findNextC(Tile s, int[] dir) {
+		Tile next = null;
+		Checkpoint c = null;
+		
+		//Kiem tra de quyet dinh neu checkpoint duoc tim thay
+		boolean found = false;
+		int counter = 1;
+		//so nguyen tang moi vong lap
+		while(!found) {
+			
+			if(s.getXPlace()+dir[0]*counter == grid.getTilesWide() || s.getYPlace() + dir[1]*counter == grid.getTilesHigh() || s.getType() != grid.GetTile(s.getXPlace()+dir[0]*counter, s.getYPlace()+dir[1]*counter).getType()) {
+				
+				found = true;
+				// tru counter di 1 de tim ra tile truoc khi tao tiletype moi
+				counter -=1;
+				next = grid.GetTile(s.getXPlace()+dir[0]*counter, s.getYPlace()+dir[1]*counter);
+			}
+			counter++;
+		}
+		
+		c = new Checkpoint(next, dir[0],dir[1]);
+		return c;
+	}
+	
+	private int[] findNextD(Tile s) {
+		int[] dir = new int[2];
+		Tile u = grid.GetTile(s.getXPlace(),s.getYPlace()-1);
+		Tile r = grid.GetTile(s.getXPlace()+1,s.getYPlace());
+		Tile d = grid.GetTile(s.getXPlace(),s.getYPlace()+1);
+		Tile l = grid.GetTile(s.getXPlace()-1,s.getYPlace());
+		
+		// Kiem tra tiletype phu hop voi tiletype o tren, duoi, trai, phai
+		if(s.getType()==u.getType() && directions[1] !=1) {
+			dir[0]=0;
+			dir[1]=-1;
+		} else if(s.getType()==r.getType() && directions[0] !=-1) {
+			dir[0]=1;
+			dir[1]=0;
+		} else if(s.getType()==d.getType() && directions[1] !=-1) {
+			dir[0]=0;
+			dir[1]=1;
+		} else if(s.getType()==l.getType() && directions[0] !=1) {
+			dir[0]=-1;
+			dir[1]=0;
+		} else {
+			dir[0]=2;
+			dir[1]=2;
+		}
+		return dir;
+	}
+	
+	//Nhan sat thuong
+	public void damage(int amount) {
+		health -= amount;
+		if(health <=0) {
+			die();
+			Player.modifyCash(8);
+		}
+	}
+	
+	// Chet
+	private void die() {
+		alive = false;
+	}
+	
+	// Ve ke thu voi thanh mau o tren
+	public void draw() {
+		float healthPercentage = health / startHealth;
+		DrawQuadTex(texture,x,y,width,height);
+		DrawQuadTex(healthBackground,x,y- 16,width,8);
+		DrawQuadTex(healthForeground,x,y-16,TILE_SIZE* healthPercentage,8);
+		DrawQuadTex(healthBorder,x,y-16,width,8);
+	}
+	
+	public void reduceHiddenHealth(float amount) {
+		hiddenHealth -= amount;
+	}
+	
+	public float getHiddenHealth() {
+		return hiddenHealth;
+	}
+
+	public int getWidth() {
+		return width;
+	}
+
+	public void setWidth(int width) {
+		this.width = width;
+	}
+
+	public int getHeight() {
+		return height;
+	}
+
+	public void setHeight(int height) {
+		this.height = height;
+	}
+
+	public float getHealth() {
+		return health;
+	}
+
+	public void setHealth(float health) {
+		this.health = health;
+	}
+
+	public float getSpeed() {
+		return speed;
+	}
+
+	public void setSpeed(float speed) {
+		this.speed = speed;
+	}
+
+	public float getX() {
+		return x;
+	}
+
+	public void setX(float x) {
+		this.x = x;
+	}
+
+	public float getY() {
+		return y;
+	}
+
+	public void setY(float y) {
+		this.y = y;
+	}
+
+	public Texture getTexture() {
+		return texture;
+	}
+
+	public void setTexture(Texture texture) {
+		this.texture = texture;
+	}
+	
+	public void setTexture(String textureName) {
+		this.texture = QuickLoad(textureName);
+	}
+
+	public Tile getStartTile() {
+		return startTile;
+	}
+
+	public void setStartTile(Tile startTile) {
+		this.startTile = startTile;
+	}
+
+	public boolean isFirst() {
+		return first;
+	}
+
+	public void setFirst(boolean first) {
+		this.first = first;
+	}
+	
+	public TileGrid getTileGrid() {
+		return grid;
+	}
+	
+	public boolean isAlive() {
+		return alive;
+	}
+	
+}
+
